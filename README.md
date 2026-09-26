@@ -37,7 +37,9 @@ python -m assistant
 - **Через Claude API** (если `ANTHROPIC_API_KEY` заполнен). Оплата по факту использования, лимиты подписки не тратятся.
 - **Через Google Gemini, бесплатно** (если `ANTHROPIC_API_KEY` пуст, а `GEMINI_API_KEY` заполнен). Ключ без карты: https://aistudio.google.com/apikey. У бесплатного тарифа есть дневные лимиты запросов. Поиск идёт через Google.
 
-**Первый запуск (Windows):**
+**Быстрая установка (Windows):** скачайте и распакуйте проект, затем дважды щёлкните **`install.bat`**. Он сам установит Python, Claude Code и библиотеки, попросит войти в Claude, откроет `.env` для токена, по желанию включит автозапуск и запустит бота.
+
+**Ручная установка (Windows):**
 
 1. Установите Python 3.11+ с https://www.python.org/downloads/ и отметьте галочку **Add Python to PATH**.
 2. Скачайте проект: зелёная кнопка **Code → Download ZIP** на GitHub, распакуйте.
