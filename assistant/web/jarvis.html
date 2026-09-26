@@ -1,0 +1,640 @@
+<title>Джарвис</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tektur:wght@500;700&family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #04070b;
+    --bg-2: #07111a;
+    --panel: rgba(9, 22, 31, 0.74);
+    --line: #163644;
+    --line-bright: #25586b;
+    --cyan: #6fe3ff;
+    --cyan-dim: #2d7489;
+    --gold: #e8b04a;
+    --red: #e0533f;
+    --green: #5fe0a4;
+    --text: #d4ecf4;
+    --muted: #6d8d9a;
+    --display: "Tektur", "Segoe UI", system-ui, sans-serif;
+    --body: "Onest", "Segoe UI", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1200px 700px at 50% 38%, rgba(40, 120, 150, 0.16), transparent 70%),
+      repeating-linear-gradient(0deg, rgba(111, 227, 255, 0.025) 0 1px, transparent 1px 44px),
+      repeating-linear-gradient(90deg, rgba(111, 227, 255, 0.025) 0 1px, transparent 1px 44px),
+      var(--bg);
+    color: var(--text);
+    font: 15px/1.5 var(--body);
+    padding-inline: 16px;
+    padding-block: 12px 16px;
+  }
+  .shell {
+    max-width: 1320px;
+    margin: 0 auto;
+    min-height: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 14px;
+  }
+
+  /* --- top bar --- */
+  header.bar {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 18px;
+    padding-block: 6px; border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: baseline; gap: 12px; }
+  .brand h1 {
+    margin: 0; font: 700 22px/1 var(--display); letter-spacing: 0.32em; color: var(--cyan);
+    text-shadow: 0 0 18px rgba(111, 227, 255, 0.45);
+  }
+  .brand small { font: 500 11px/1 var(--display); letter-spacing: 0.18em; color: var(--muted); text-transform: uppercase; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px; border: 1px solid var(--line-bright);
+    font: 500 11px/1.4 var(--mono); letter-spacing: 0.06em; color: var(--muted); text-transform: uppercase;
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+    background: rgba(9, 22, 31, 0.6);
+  }
+  .chip b { color: var(--text); font-weight: 600; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); box-shadow: 0 0 8px currentColor; }
+  .dot.ok { background: var(--green); color: var(--green); }
+  .dot.demo { background: var(--gold); color: var(--gold); }
+
+  /* --- main grid --- */
+  main.hud {
+    display: grid; gap: 14px; align-items: start;
+    grid-template-columns: minmax(230px, 1fr) minmax(320px, 1.55fr) minmax(230px, 1fr);
+    grid-template-areas: "left core right";
+  }
+  .left { grid-area: left; } .core { grid-area: core; } .right { grid-area: right; }
+  .col { display: grid; gap: 14px; }
+
+  .panel {
+    position: relative; background: var(--panel); border: 1px solid var(--line); padding: 14px 16px 16px;
+    clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+    backdrop-filter: blur(6px);
+  }
+  .panel::before {
+    content: ""; position: absolute; left: 0; top: 0; width: 42px; height: 2px; background: var(--cyan);
+    box-shadow: 0 0 12px var(--cyan);
+  }
+  .panel h2 {
+    margin: 0 0 12px; font: 500 11px/1 var(--display); letter-spacing: 0.24em; text-transform: uppercase;
+    color: var(--cyan); display: flex; justify-content: space-between; gap: 8px;
+  }
+  .panel h2 span { color: var(--muted); letter-spacing: 0.08em; font-family: var(--mono); }
+
+  /* clock */
+  .clock { font: 600 44px/1 var(--mono); letter-spacing: 0.02em; font-variant-numeric: tabular-nums; color: var(--text); }
+  .clock .sec { font-size: 20px; color: var(--cyan); margin-left: 4px; }
+  .date { margin-top: 8px; color: var(--muted); font: 500 13px/1.3 var(--body); }
+
+  /* meters */
+  .meters { display: grid; gap: 12px; }
+  .meter { display: grid; gap: 6px; }
+  .meter-top { display: flex; justify-content: space-between; font: 500 11px/1 var(--mono); letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; }
+  .meter-top b { color: var(--text); font-variant-numeric: tabular-nums; }
+  .track {
+    height: 10px; background: rgba(111, 227, 255, 0.08);
+    -webkit-mask: repeating-linear-gradient(90deg, #000 0 7px, transparent 7px 9px);
+            mask: repeating-linear-gradient(90deg, #000 0 7px, transparent 7px 9px);
+  }
+  .fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--cyan-dim), var(--cyan)); transition: width 0.8s ease; }
+  .fill.warn { background: linear-gradient(90deg, #8a6424, var(--gold)); }
+  .fill.crit { background: linear-gradient(90deg, #7d2a20, var(--red)); }
+
+  /* core */
+  .core { display: grid; justify-items: center; gap: 10px; padding-top: 6px; }
+  .reactor-wrap { position: relative; width: min(100%, 440px); aspect-ratio: 1; max-width: 100%; }
+  #reactor { width: 100%; height: 100%; display: block; cursor: pointer; }
+  .state {
+    font: 700 13px/1 var(--display); letter-spacing: 0.4em; text-transform: uppercase; color: var(--cyan);
+    text-shadow: 0 0 12px rgba(111, 227, 255, 0.5); min-height: 1em;
+  }
+  .state.thinking { color: var(--gold); text-shadow: 0 0 12px rgba(232, 176, 74, 0.5); }
+  .reply {
+    width: 100%; max-width: 62ch; min-height: 3.2em; text-align: center; font: 400 17px/1.55 var(--body);
+    color: var(--text); text-wrap: balance; white-space: pre-line;
+  }
+  .reply .caret { display: inline-block; width: 0.55em; height: 1.05em; vertical-align: -0.15em; background: var(--cyan); margin-left: 2px; animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* lists */
+  ul.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  ul.list li { display: grid; grid-template-columns: 16px 1fr; gap: 10px; align-items: start; font-size: 14px; line-height: 1.4; }
+  .box { width: 12px; height: 12px; margin-top: 4px; border: 1px solid var(--cyan-dim); transform: rotate(45deg); }
+  li.done { color: var(--muted); text-decoration: line-through; }
+  li.done .box { background: var(--cyan-dim); }
+  .due { display: block; font: 500 11px/1.4 var(--mono); color: var(--gold); text-decoration: none; }
+  .note-mark { width: 12px; height: 2px; margin-top: 10px; background: var(--gold); }
+  .empty { color: var(--muted); font-size: 13px; }
+  .sample { font: 500 10px/1 var(--mono); color: var(--gold); letter-spacing: 0.1em; }
+
+  /* dock */
+  .dock { display: grid; gap: 10px; }
+  .log {
+    max-height: 190px; overflow-y: auto; display: grid; gap: 8px; padding-right: 6px;
+    scrollbar-width: thin; scrollbar-color: var(--line-bright) transparent;
+  }
+  .msg { display: grid; grid-template-columns: 74px 1fr; gap: 12px; font-size: 14px; line-height: 1.5; }
+  .msg .who { font: 600 11px/1.9 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .msg.j .who { color: var(--cyan); }
+  .msg.err .who, .msg.err .txt { color: var(--red); }
+  .msg .txt { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+  .quick { display: flex; flex-wrap: wrap; gap: 8px; }
+  .quick button {
+    font: 500 12px/1 var(--body); color: var(--text); background: transparent; border: 1px solid var(--line-bright);
+    padding: 8px 12px; cursor: pointer;
+    clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px);
+  }
+  .quick button:hover { border-color: var(--cyan); color: var(--cyan); }
+
+  form.ask { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: stretch; }
+  .ask input {
+    min-width: 0; font: 400 15px/1.2 var(--body); color: var(--text); background: rgba(4, 10, 15, 0.85);
+    border: 1px solid var(--line-bright); padding: 12px 14px; outline: none;
+  }
+  .ask input::placeholder { color: var(--muted); }
+  .ask input:focus { border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan), 0 0 18px rgba(111, 227, 255, 0.2); }
+  .btn {
+    font: 700 12px/1 var(--display); letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer;
+    border: 1px solid var(--cyan-dim); background: rgba(111, 227, 255, 0.08); color: var(--cyan); padding: 0 16px; min-height: 44px;
+    clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+  }
+  .btn:hover { background: rgba(111, 227, 255, 0.16); }
+  .btn.mic { width: 52px; padding: 0; display: grid; place-items: center; }
+  .btn.mic svg { width: 20px; height: 20px; }
+  .btn.mic.on { background: var(--cyan); color: var(--bg); box-shadow: 0 0 22px rgba(111, 227, 255, 0.6); }
+  .toggles { display: flex; flex-wrap: wrap; gap: 16px; font: 500 12px/1.3 var(--body); color: var(--muted); }
+  .toggles label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+  .toggles input { accent-color: var(--cyan); width: 16px; height: 16px; }
+  .hint { font: 400 12px/1.4 var(--body); color: var(--muted); }
+  .hint b { color: var(--gold); font-weight: 500; }
+
+  button:focus-visible, input:focus-visible, canvas:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  @media (max-width: 1000px) {
+    main.hud { grid-template-columns: 1fr 1fr; grid-template-areas: "core core" "left right"; }
+  }
+  @media (max-width: 640px) {
+    main.hud { grid-template-columns: 1fr; grid-template-areas: "core" "right" "left"; }
+    .clock { font-size: 36px; }
+    .msg { grid-template-columns: 1fr; gap: 0; }
+    .brand small { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fill { transition: none; }
+    .reply .caret { animation: none; }
+  }
+</style>
+
+<div class="shell">
+  <header class="bar">
+    <div class="brand">
+      <h1>J.A.R.V.I.S.</h1>
+      <small>Just A Rather Very Intelligent System</small>
+    </div>
+    <div class="chips">
+      <span class="chip"><span class="dot" id="link-dot"></span><b id="link-label">Подключение…</b></span>
+      <span class="chip">Ядро <b id="brain">—</b></span>
+      <span class="chip">Протокол <b>RU-1</b></span>
+    </div>
+  </header>
+
+  <main class="hud">
+    <section class="core" aria-label="Ядро">
+      <div class="reactor-wrap">
+        <canvas id="reactor" tabindex="0" aria-label="Реактор. Нажмите, чтобы говорить"></canvas>
+      </div>
+      <div class="state" id="state">Ожидание</div>
+      <div class="reply" id="reply" aria-live="polite"></div>
+    </section>
+
+    <aside class="col left">
+      <div class="panel">
+        <h2>Время <span id="tz">—</span></h2>
+        <div class="clock" id="clock">--:--<span class="sec">--</span></div>
+        <div class="date" id="date">—</div>
+      </div>
+      <div class="panel">
+        <h2>Системы <span id="uptime">—</span></h2>
+        <div class="meters">
+          <div class="meter"><div class="meter-top">Процессор <b id="cpu-v">—</b></div><div class="track"><div class="fill" id="cpu"></div></div></div>
+          <div class="meter"><div class="meter-top">Память <b id="ram-v">—</b></div><div class="track"><div class="fill" id="ram"></div></div></div>
+          <div class="meter"><div class="meter-top">Диск <b id="disk-v">—</b></div><div class="track"><div class="fill" id="disk"></div></div></div>
+          <div class="meter" id="bat-row"><div class="meter-top">Питание <b id="bat-v">—</b></div><div class="track"><div class="fill" id="bat"></div></div></div>
+        </div>
+      </div>
+    </aside>
+
+    <aside class="col right">
+      <div class="panel">
+        <h2>Задачи <span id="task-count">—</span></h2>
+        <ul class="list" id="tasks"></ul>
+      </div>
+      <div class="panel">
+        <h2>Заметки <span id="note-count">—</span></h2>
+        <ul class="list" id="notes"></ul>
+      </div>
+    </aside>
+  </main>
+
+  <section class="panel dock" aria-label="Связь">
+    <div class="log" id="log" aria-live="polite"></div>
+    <div class="quick">
+      <button type="button" data-q="Проведи утренний брифинг: дата, время, мои задачи на сегодня и важные заметки.">Брифинг</button>
+      <button type="button" data-q="Какие у меня задачи?">Мои задачи</button>
+      <button type="button" data-q="Найди три главные новости дня и кратко перескажи.">Новости дня</button>
+      <button type="button" data-q="Какая сейчас погода в Киеве?">Погода</button>
+      <button type="button" data-q="Запиши заметку: ">Заметка…</button>
+    </div>
+    <form class="ask" id="ask">
+      <button class="btn mic" type="button" id="mic" aria-label="Говорить" title="Говорить">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="3" width="6" height="11" rx="3" fill="none"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3" fill="none"/></svg>
+      </button>
+      <input id="q" type="text" autocomplete="off" placeholder="Скажите «Джарвис…» или напишите команду">
+      <button class="btn" type="submit">Выполнить</button>
+    </form>
+    <div class="toggles">
+      <label><input type="checkbox" id="wake"> Слушать постоянно (обращение «Джарвис»)</label>
+      <label><input type="checkbox" id="speak" checked> Отвечать голосом</label>
+      <button class="btn" type="button" id="reset" style="min-height:32px">Новый разговор</button>
+    </div>
+    <div class="hint" id="hint"></div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let live = false;
+  let title = "сэр";
+  let state = "idle";          // idle | listening | thinking | speaking
+  let amp = 0;                 // 0..1, громкость голоса для реактора
+  let analyser = null, audioCtx = null, freq = null;
+
+  /* ---------- Реактор ---------- */
+  const cv = $("reactor"), ctx = cv.getContext("2d");
+  function sizeCanvas() {
+    const r = cv.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
+    cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  new ResizeObserver(sizeCanvas).observe(cv);
+
+  const COLORS = { idle: [111, 227, 255], listening: [150, 240, 255], thinking: [232, 176, 74], speaking: [111, 227, 255] };
+  let col = [...COLORS.idle];
+  function rgba(c, a) { return `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`; }
+
+  function draw(t) {
+    const w = cv.clientWidth, h = cv.clientHeight, cx = w / 2, cy = h / 2, R = Math.min(w, h) * 0.46;
+    const target = COLORS[state];
+    for (let i = 0; i < 3; i++) col[i] += (target[i] - col[i]) * 0.08;
+
+    if (analyser) {
+      analyser.getByteFrequencyData(freq);
+      let s = 0; for (let i = 0; i < freq.length; i++) s += freq[i];
+      amp += ((s / freq.length / 255) * 2.2 - amp) * 0.35;
+    } else if (state === "speaking") {
+      amp += ((0.35 + 0.3 * Math.abs(Math.sin(t / 130)) * Math.abs(Math.sin(t / 370))) - amp) * 0.2;
+    } else {
+      amp += (0 - amp) * 0.1;
+    }
+    const speed = reduceMotion ? 0.15 : state === "thinking" ? 3.2 : state === "listening" ? 1.6 : 1;
+    const k = t / 1000 * speed;
+    ctx.clearRect(0, 0, w, h);
+
+    // мягкое свечение
+    const glow = ctx.createRadialGradient(cx, cy, R * 0.05, cx, cy, R * 1.05);
+    glow.addColorStop(0, rgba(col, 0.28 + amp * 0.35));
+    glow.addColorStop(0.45, rgba(col, 0.07));
+    glow.addColorStop(1, rgba(col, 0));
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(cx, cy, R * 1.05, 0, Math.PI * 2); ctx.fill();
+
+    // внешнее кольцо: 72 деления
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(k * 0.12);
+    for (let i = 0; i < 72; i++) {
+      const a = (i / 72) * Math.PI * 2;
+      const lit = 0.25 + 0.75 * Math.max(0, Math.sin(a * 3 - k * 2.4)) * (0.4 + amp);
+      const len = i % 6 === 0 ? R * 0.1 : R * 0.05;
+      ctx.strokeStyle = rgba(col, Math.min(1, lit)); ctx.lineWidth = i % 6 === 0 ? 2.2 : 1.2;
+      ctx.beginPath(); ctx.moveTo(Math.cos(a) * (R - len), Math.sin(a) * (R - len)); ctx.lineTo(Math.cos(a) * R, Math.sin(a) * R); ctx.stroke();
+    }
+    ctx.restore();
+
+    // дуги среднего кольца, вращаются навстречу
+    const arcs = [[0.84, 3, -0.35, 5], [0.74, 4, 0.55, 2.5], [0.66, 2, -0.9, 1.5]];
+    for (const [rr, n, sp, lw] of arcs) {
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(k * sp);
+      ctx.strokeStyle = rgba(col, 0.75); ctx.lineWidth = lw; ctx.shadowColor = rgba(col, 0.8); ctx.shadowBlur = 12;
+      for (let i = 0; i < n; i++) {
+        const a0 = (i / n) * Math.PI * 2;
+        ctx.beginPath(); ctx.arc(0, 0, R * rr, a0, a0 + (Math.PI * 2 / n) * 0.62); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // золотое кольцо: пунктир, заметно при размышлении
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(-k * 0.8);
+    ctx.setLineDash([R * 0.04, R * 0.03]);
+    ctx.strokeStyle = `rgba(232,176,74,${state === "thinking" ? 0.9 : 0.28})`; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, 0, R * 0.56, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+
+    // треугольный сердечник (как у Mark VI)
+    const tri = R * (0.36 + amp * 0.05);
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(-Math.PI / 2);
+    ctx.strokeStyle = rgba(col, 0.9); ctx.lineWidth = 2.5; ctx.shadowColor = rgba(col, 1); ctx.shadowBlur = 18;
+    ctx.beginPath();
+    for (let i = 0; i < 3; i++) { const a = (i / 3) * Math.PI * 2; ctx[i ? "lineTo" : "moveTo"](Math.cos(a) * tri, Math.sin(a) * tri); }
+    ctx.closePath(); ctx.stroke();
+    ctx.restore();
+
+    // ядро
+    const core = R * (0.2 + amp * 0.12);
+    const cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, core);
+    cg.addColorStop(0, "rgba(255,255,255,0.95)");
+    cg.addColorStop(0.35, rgba(col, 0.9));
+    cg.addColorStop(1, rgba(col, 0));
+    ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(cx, cy, core, 0, Math.PI * 2); ctx.fill();
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+
+  function setState(s, label) {
+    state = s;
+    const names = { idle: "Ожидание", listening: "Слушаю", thinking: "Анализ", speaking: "Ответ" };
+    const el = $("state"); el.textContent = label || names[s]; el.classList.toggle("thinking", s === "thinking");
+  }
+
+  /* ---------- Часы ---------- */
+  function tick() {
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2, "0"), mm = String(d.getMinutes()).padStart(2, "0"), ss = String(d.getSeconds()).padStart(2, "0");
+    $("clock").innerHTML = `${hh}:${mm}<span class="sec">${ss}</span>`;
+    const ds = d.toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    $("date").textContent = ds.charAt(0).toUpperCase() + ds.slice(1);
+    $("tz").textContent = Intl.DateTimeFormat().resolvedOptions().timeZone.split("/").pop().replace("_", " ");
+  }
+  tick(); setInterval(tick, 1000);
+
+  /* ---------- API ---------- */
+  async function api(path, body) {
+    const res = await fetch(path, {
+      method: body === undefined ? "GET" : "POST",
+      headers: { "X-Jarvis": "1", "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res;
+  }
+
+  const DEMO = {
+    backend: "Демо-режим",
+    system: { cpu: 23, ram: 61, disk: 48, battery: { percent: 86, plugged: true }, uptime_s: 5400 },
+    tasks: [
+      { title: "Позвонить поставщику насчёт скидки 10%", done: false, due: "пятница" },
+      { title: "Подготовить презентацию к уроку по физике", done: false, due: null },
+      { title: "Записаться на стрижку", done: true, due: null },
+    ],
+    notes: ["Встреча с поставщиком: обсудить скидку", "Идеи для урока: опыт с магнитами"],
+  };
+  function demoReply(q) {
+    const s = q.toLowerCase();
+    if (s.includes("брифинг")) return `Доброе утро, ${title}. Сегодня ${new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" })}. В списке две открытые задачи: звонок поставщику и презентация к уроку. Рекомендую начать со звонка.`;
+    if (s.includes("задач")) return `Открытых задач две, ${title}: позвонить поставщику насчёт скидки и подготовить презентацию к уроку физики. Стрижка уже отмечена выполненной.`;
+    if (s.includes("погод")) return `В демо-режиме у меня нет доступа к сети, ${title}. Когда запустите меня на компьютере, я найду актуальный прогноз.`;
+    if (s.includes("новост")) return `Новости я смогу искать, когда вы запустите меня локально, ${title}. Сейчас это только превью интерфейса.`;
+    if (s.includes("заметк") || s.includes("запомни")) return `Записал бы, ${title}, но в превью заметки не сохраняются. В рабочей версии они попадут в вашу память.`;
+    return `Это превью интерфейса, ${title}. В рабочей версии я отвечу через вашего ассистента: поиск, заметки, задачи и документы.`;
+  }
+
+  /* ---------- Статус ---------- */
+  function meter(id, v) {
+    const f = $(id); f.style.width = (v ?? 0) + "%";
+    f.classList.toggle("warn", v >= 75 && v < 90); f.classList.toggle("crit", v >= 90);
+    $(id + "-v").textContent = v == null ? "—" : v + "%";
+  }
+  function fmtUptime(s) { const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return `в работе ${h} ч ${String(m).padStart(2, "0")} мин`; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+  function render(st) {
+    $("brain").textContent = st.backend;
+    const sys = st.system;
+    meter("cpu", sys.cpu); meter("ram", sys.ram); meter("disk", sys.disk);
+    if (sys.battery) { $("bat-row").hidden = false; meter("bat", sys.battery.percent); $("bat-v").textContent = sys.battery.percent + "%" + (sys.battery.plugged ? " · сеть" : ""); }
+    else $("bat-row").hidden = true;
+    $("uptime").textContent = fmtUptime(sys.uptime_s);
+
+    const open = st.tasks.filter((t) => !t.done).length;
+    $("task-count").textContent = `${open} откр.`;
+    const sampleTag = live ? "" : ' <span class="sample">ПРИМЕР</span>';
+    $("tasks").innerHTML = st.tasks.length
+      ? st.tasks.slice(0, 7).map((t) => `<li class="${t.done ? "done" : ""}"><span class="box"></span><span>${esc(t.title)}${t.due ? `<span class="due">срок: ${esc(t.due)}</span>` : ""}</span></li>`).join("") + (live ? "" : `<li><span></span>${sampleTag}</li>`)
+      : '<li class="empty"><span></span><span>Задач нет. Скажите: «Джарвис, добавь задачу…»</span></li>';
+    $("note-count").textContent = st.notes.length || "—";
+    $("notes").innerHTML = st.notes.length
+      ? st.notes.map((n) => `<li><span class="note-mark"></span><span>${esc(n)}</span></li>`).join("")
+      : '<li class="empty"><span></span><span>Заметок пока нет.</span></li>';
+  }
+
+  async function refresh() {
+    if (!live) return;
+    try { render(await (await api("/api/status")).json()); } catch { /* сервер перезапускается */ }
+  }
+
+  /* ---------- Журнал и ответы ---------- */
+  function logMsg(kind, text) {
+    const row = document.createElement("div");
+    row.className = "msg " + kind;
+    row.innerHTML = `<span class="who">${kind === "u" ? "Вы" : kind === "err" ? "Сбой" : "Джарвис"}</span><span class="txt"></span>`;
+    row.querySelector(".txt").textContent = text;
+    $("log").appendChild(row); $("log").scrollTop = $("log").scrollHeight;
+  }
+
+  function typeReply(text) {
+    const el = $("reply");
+    if (reduceMotion) { el.textContent = text; return; }
+    el.textContent = ""; let i = 0;
+    const caret = document.createElement("span"); caret.className = "caret";
+    const step = () => {
+      i = Math.min(text.length, i + Math.max(1, Math.round(text.length / 90)));
+      el.textContent = text.slice(0, i); el.appendChild(caret);
+      if (i < text.length) setTimeout(step, 18); else setTimeout(() => caret.remove(), 1200);
+    };
+    step();
+  }
+
+  function speakable(text) {
+    return text.replace(/```[\s\S]*?```/g, " ").replace(/https?:\/\/\S+/g, "").replace(/[*_#>`|]/g, "").replace(/\s+/g, " ").trim().slice(0, 1200);
+  }
+
+  async function speak(text) {
+    if (!$("speak").checked || !text) return;
+    pauseRecognition();
+    setState("speaking");
+    try {
+      if (!live) throw new Error("demo");
+      const blob = await (await api("/api/tts", { text })).blob();
+      const audio = new Audio(URL.createObjectURL(blob));
+      try {
+        if (!audioCtx || audioCtx.state !== "running") throw new Error("audio context not running");
+        const src = audioCtx.createMediaElementSource(audio);
+        analyser = audioCtx.createAnalyser(); analyser.fftSize = 256; freq = new Uint8Array(analyser.frequencyBinCount);
+        src.connect(analyser); analyser.connect(audioCtx.destination);
+      } catch { analyser = null; }
+      await audio.play();
+      await new Promise((r) => { audio.onended = r; audio.onerror = r; });
+    } catch {
+      if ("speechSynthesis" in window) {
+        await new Promise((r) => {
+          const u = new SpeechSynthesisUtterance(speakable(text)); u.lang = "ru-RU"; u.rate = 1.02;
+          u.onend = r; u.onerror = r; speechSynthesis.cancel(); speechSynthesis.speak(u);
+          setTimeout(r, 30000);
+        });
+      }
+    } finally {
+      analyser = null; setState("idle"); resumeRecognition();
+    }
+  }
+
+  let busy = false;
+  async function ask(text) {
+    text = text.trim(); if (!text || busy) return;
+    busy = true; logMsg("u", text); setState("thinking"); $("reply").textContent = "";
+    try {
+      let reply;
+      if (live) {
+        const data = await (await api("/api/ask", { text })).json();
+        if (data.error) throw new Error(data.error);
+        reply = data.reply;
+      } else {
+        await new Promise((r) => setTimeout(r, 900));
+        reply = demoReply(text);
+      }
+      logMsg("j", reply); typeReply(reply);
+      busy = false;
+      await speak(reply);
+      refresh();
+    } catch (e) {
+      busy = false;
+      const msg = e.message.includes("Failed to fetch") ? "Нет связи с сервером. Проверьте, что окно Джарвиса открыто." : e.message;
+      logMsg("err", msg); setState("idle", "Сбой связи");
+    }
+  }
+
+  $("ask").addEventListener("submit", (e) => { e.preventDefault(); const q = $("q").value; $("q").value = ""; ask(q); });
+  document.querySelectorAll(".quick button").forEach((b) => b.addEventListener("click", () => {
+    const q = b.dataset.q;
+    if (q.endsWith(": ")) { $("q").value = q; $("q").focus(); } else ask(q);
+  }));
+  $("reset").addEventListener("click", async () => {
+    if (live) { try { await api("/api/reset", {}); } catch {} }
+    $("log").innerHTML = ""; $("reply").textContent = ""; logMsg("j", `Начинаем с чистого листа, ${title}.`);
+  });
+
+  /* ---------- Голос ---------- */
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null, recActive = false, recPaused = false, pushToTalk = false, awaitingCommand = false;
+  const WAKE = /(джарвис|джервис|jarvis|жарвис)[,.!\s]*/i;
+
+  function micError(msg) { $("hint").innerHTML = msg; $("mic").classList.remove("on"); setState("idle"); }
+
+  function startRecognition() {
+    if (!SR) { micError("Голосовой ввод работает в <b>Chrome</b> или <b>Edge</b>. Пока можно писать команды текстом."); return; }
+    if (recActive) return;
+    rec = new SR(); rec.lang = "ru-RU"; rec.interimResults = true; rec.continuous = !pushToTalk;
+    rec.onresult = (e) => {
+      let finalText = "", interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        (e.results[i].isFinal ? (finalText += e.results[i][0].transcript) : (interim += e.results[i][0].transcript));
+      }
+      if (interim) $("q").placeholder = "… " + interim;
+      if (!finalText) return;
+      $("q").placeholder = "Скажите «Джарвис…» или напишите команду";
+      if (pushToTalk) { pushToTalk = false; stopRecognition(); ask(finalText); return; }
+      const m = finalText.match(WAKE);
+      if (m) {
+        const cmd = finalText.slice(m.index + m[0].length).trim();
+        if (cmd) ask(cmd); else { awaitingCommand = true; setState("listening", "Слушаю, " + title); speak("Да, " + title + "?"); }
+      } else if (awaitingCommand) { awaitingCommand = false; ask(finalText); }
+    };
+    rec.onerror = (e) => {
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+        $("wake").checked = false; pushToTalk = false;
+        micError(live ? "Доступ к микрофону запрещён. Разрешите его в адресной строке браузера (значок замка) и попробуйте снова."
+                      : "В превью микрофон недоступен. Запустите Джарвиса на компьютере, чтобы говорить с ним голосом.");
+      }
+    };
+    rec.onend = () => {
+      recActive = false;
+      if ($("wake").checked && !recPaused) setTimeout(startRecognition, 250);
+      else if (state === "listening") setState("idle");
+      if (!$("wake").checked) $("mic").classList.remove("on");
+    };
+    try { rec.start(); recActive = true; setState("listening"); $("mic").classList.add("on"); } catch { recActive = false; }
+  }
+  function stopRecognition() { try { rec && rec.stop(); } catch {} }
+  function pauseRecognition() { recPaused = true; stopRecognition(); }
+  function resumeRecognition() { recPaused = false; if ($("wake").checked) setTimeout(startRecognition, 300); }
+
+  function talkOnce() {
+    if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+    if (recActive && pushToTalk) { pushToTalk = false; stopRecognition(); return; }
+    pushToTalk = true; stopRecognition(); setTimeout(startRecognition, recActive ? 300 : 0);
+  }
+  $("mic").addEventListener("click", talkOnce);
+  cv.addEventListener("click", talkOnce);
+  cv.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); talkOnce(); } });
+  $("wake").addEventListener("change", () => {
+    try { localStorage.setItem("jarvis-wake", $("wake").checked ? "1" : "0"); } catch {}
+    if ($("wake").checked) { pushToTalk = false; startRecognition(); } else { stopRecognition(); setState("idle"); }
+  });
+  $("speak").addEventListener("change", () => { try { localStorage.setItem("jarvis-speak", $("speak").checked ? "1" : "0"); } catch {} });
+  try { if (localStorage.getItem("jarvis-speak") === "0") $("speak").checked = false; } catch {}
+
+  // Аудио-контекст для анимации реактора создаём по первому действию пользователя.
+  function unlockAudio() {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+    } catch { audioCtx = null; }
+  }
+  addEventListener("pointerdown", unlockAudio, { passive: true });
+  addEventListener("keydown", unlockAudio);
+
+  /* ---------- Запуск ---------- */
+  (async () => {
+    try {
+      const ctrl = new AbortController(); setTimeout(() => ctrl.abort(), 2000);
+      const res = await fetch("/api/status", { headers: { "X-Jarvis": "1" }, signal: ctrl.signal });
+      const st = await res.json();
+      if (!st.jarvis) throw new Error("not jarvis");
+      live = true; title = st.title || title; render(st);
+      $("link-dot").className = "dot ok"; $("link-label").textContent = "Онлайн";
+      $("hint").innerHTML = "Нажмите на реактор или микрофон и говорите. Для режима «всегда слушать» включите галочку ниже.";
+      try { if (localStorage.getItem("jarvis-wake") === "1") { $("wake").checked = true; startRecognition(); } } catch {}
+      setInterval(refresh, 5000);
+      const greet = `Системы в норме, ${title}. Чем могу помочь?`;
+      logMsg("j", greet); typeReply(greet);
+    } catch {
+      live = false; render(DEMO);
+      $("link-dot").className = "dot demo"; $("link-label").textContent = "Превью";
+      $("hint").innerHTML = "<b>Превью интерфейса.</b> Задачи и заметки здесь для примера, ответы заготовлены. Рабочая версия запускается на вашем компьютере командой <b>python -m assistant.jarvis_web</b>.";
+      const greet = `Добрый день, ${title}. Это превью: попробуйте кнопку «Брифинг».`;
+      logMsg("j", greet); typeReply(greet);
+    }
+  })();
+})();
+</script>

@@ -6,7 +6,7 @@ import pytest
 pytest.importorskip("telegram")
 pytest.importorskip("edge_tts")
 
-from assistant import telegram_bot, voice  # noqa: E402
+from assistant import voice  # noqa: E402
 from assistant.telegram_bot import Bot, parse_allowed_users, split_message  # noqa: E402
 
 

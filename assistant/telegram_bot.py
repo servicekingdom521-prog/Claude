@@ -15,9 +15,8 @@ from telegram.constants import ChatAction
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 from assistant import voice
-from assistant.claude_code_backend import ClaudeCodeAssistant, ClaudeCodeError
-from assistant.main import Assistant
-from assistant.tools import Toolbox
+from assistant.backends import backend_label, detect_backend, make_assistant_factory
+from assistant.claude_code_backend import ClaudeCodeError
 
 log = logging.getLogger("assistant.bot")
 TELEGRAM_LIMIT = 4000
@@ -161,27 +160,9 @@ def main() -> None:
         log.warning("TELEGRAM_ALLOWED_USERS пуст — бот никому не ответит, но сообщит ваш ID. Напишите ему /start.")
 
     data_dir = Path(os.environ.get("ASSISTANT_DATA_DIR", "data"))
-    backend = os.environ.get("ASSISTANT_BACKEND") or (
-        "api" if os.environ.get("ANTHROPIC_API_KEY")
-        else "gemini" if os.environ.get("GEMINI_API_KEY")
-        else "claude-code"
-    )
-    if backend == "gemini":
-        from google import genai
-
-        from assistant.gemini_backend import GeminiAssistant
-
-        client, toolbox = genai.Client(api_key=os.environ["GEMINI_API_KEY"]), Toolbox(data_dir)
-        make_assistant = lambda chat_id: GeminiAssistant(client, toolbox)  # noqa: E731
-        log.info("Режим: Google Gemini (%s)", os.environ.get("GEMINI_MODEL", "gemini-flash-latest"))
-    elif backend == "api":
-        client, toolbox = anthropic.Anthropic(), Toolbox(data_dir)
-        make_assistant = lambda chat_id: Assistant(client, toolbox)  # noqa: E731
-        log.info("Режим: Claude API")
-    else:
-        make_assistant = lambda chat_id: ClaudeCodeAssistant(data_dir, chat_key=str(chat_id))  # noqa: E731
-        make_assistant(0)  # сразу проверить, что Claude Code установлен
-        log.info("Режим: Claude Code по подписке (без API-ключа)")
+    backend = detect_backend()
+    make_assistant = make_assistant_factory(data_dir, backend)
+    log.info("Режим: %s", backend_label(backend))
     bot = Bot(allowed, make_assistant)
 
     app = Application.builder().token(token).concurrent_updates(True).build()

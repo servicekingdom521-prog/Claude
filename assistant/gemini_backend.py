@@ -10,12 +10,13 @@ import os
 from google import genai
 from google.genai import errors, types
 
+from assistant.persona import PERSONA
 from assistant.tools import LOCAL_TOOLS, Toolbox, ToolError
 
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-latest")
 MAX_TOOL_ROUNDS = 15
 
-SYSTEM_PROMPT = """Ты — личный ассистент пользователя для повседневных и бизнес-задач. Пользователь часто общается голосом через Telegram, поэтому отвечай разговорно, по делу и без таблиц; развёрнутые материалы сохраняй в файлы через write_file.
+SYSTEM_PROMPT = PERSONA + """Ты помогаешь пользователю с повседневными и бизнес-задачами. Пользователь часто общается голосом через Telegram, поэтому отвечай разговорно, по делу и без таблиц; развёрнутые материалы сохраняй в файлы через write_file.
 
 Ты умеешь: искать актуальную информацию (web_search), вести заметки и задачи (они сохраняются между сессиями), читать и создавать документы, писать черновики деловых писем (сам ты их не отправляешь), помогать с планированием и идеями для бизнеса.
 

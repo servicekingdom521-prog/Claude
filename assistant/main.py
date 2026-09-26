@@ -7,9 +7,10 @@ from pathlib import Path
 import anthropic
 from dotenv import load_dotenv
 
+from assistant.persona import PERSONA
 from assistant.tools import ALL_TOOLS, Toolbox, ToolError
 
-SYSTEM_PROMPT = """Ты — личный ассистент пользователя для повседневных и бизнес-задач.
+SYSTEM_PROMPT = PERSONA + """Ты помогаешь пользователю с повседневными и бизнес-задачами.
 
 Что ты умеешь:
 - отвечать на вопросы и искать актуальную информацию в интернете (web_search, web_fetch) — при поиске указывай источники;
