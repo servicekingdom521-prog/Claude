@@ -59,7 +59,9 @@ python -m assistant
 
 Готово: теперь бот отвечает только вам. Первое голосовое обработается дольше обычного, потому что скачивается модель распознавания (~500 МБ, один раз).
 
-**macOS / Linux:** то же самое, но `source .venv/bin/activate`, `cp .env.example .env` и `nano .env`.
+**macOS:** дважды щёлкните **`install.command`**, а потом **`jarvis.command`**, чтобы запустить Джарвиса. Если macOS не даёт открыть файл, нажмите на него правой кнопкой → **Открыть**. Telegram-бот на Mac: `.venv/bin/python -m assistant.telegram_bot` в Терминале, в папке бота.
+
+**Linux:** то же, что на Windows, но `source .venv/bin/activate`, `cp .env.example .env` и `nano .env`.
 
 **Дальнейшие запуски:** двойной щелчок по `start-bot.bat` в папке бота. Если бот упадёт, он сам перезапустится через 10 секунд.
 
