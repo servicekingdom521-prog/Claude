@@ -7,6 +7,8 @@ if not exist .venv\Scripts\activate.bat (
   exit /b 1
 )
 call .venv\Scripts\activate.bat
+echo Проверяю библиотеки...
+pip install -q -r requirements.txt
 :loop
 python -m assistant.telegram_bot
 echo Бот остановился. Перезапуск через 10 секунд, закройте окно, чтобы выключить.

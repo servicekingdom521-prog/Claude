@@ -7,5 +7,7 @@ if not exist .venv\Scripts\activate.bat (
   exit /b 1
 )
 call .venv\Scripts\activate.bat
+echo Проверяю библиотеки...
+pip install -q -r requirements.txt
 python -m assistant.jarvis_web
 pause
