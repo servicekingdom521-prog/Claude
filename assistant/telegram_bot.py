@@ -6,6 +6,7 @@ import logging
 import os
 import tempfile
 from pathlib import Path
+from typing import Callable
 
 import anthropic
 from dotenv import load_dotenv
@@ -14,6 +15,7 @@ from telegram.constants import ChatAction
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 from assistant import voice
+from assistant.claude_code_backend import ClaudeCodeAssistant, ClaudeCodeError
 from assistant.main import Assistant
 from assistant.tools import Toolbox
 
@@ -39,16 +41,15 @@ def split_message(text: str, limit: int = TELEGRAM_LIMIT) -> list[str]:
 
 
 class Bot:
-    def __init__(self, allowed_users: set[int], toolbox: Toolbox, client: anthropic.Anthropic):
+    def __init__(self, allowed_users: set[int], make_assistant: Callable[[int], object]):
         self.allowed_users = allowed_users
-        self.toolbox = toolbox
-        self.client = client
-        self.assistants: dict[int, Assistant] = {}
+        self.make_assistant = make_assistant
+        self.assistants: dict[int, object] = {}
         self.locks: dict[int, asyncio.Lock] = {}
 
-    def _assistant(self, chat_id: int) -> Assistant:
+    def _assistant(self, chat_id: int):
         if chat_id not in self.assistants:
-            self.assistants[chat_id] = Assistant(self.client, self.toolbox)
+            self.assistants[chat_id] = self.make_assistant(chat_id)
             self.locks[chat_id] = asyncio.Lock()
         return self.assistants[chat_id]
 
@@ -76,7 +77,7 @@ class Bot:
     async def new_dialog(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if not await self._check_access(update):
             return
-        self._assistant(update.effective_chat.id).messages.clear()
+        self._assistant(update.effective_chat.id).reset()
         await update.effective_message.reply_text("Начат новый диалог.")
 
     async def on_text(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -108,6 +109,8 @@ class Bot:
             typing = asyncio.create_task(self._keep_typing(context, msg.chat_id))
             try:
                 reply = await asyncio.to_thread(assistant.ask, text, io.StringIO())
+            except ClaudeCodeError as e:
+                reply = f"Ошибка: {e}"
             except anthropic.AuthenticationError:
                 reply = "Ошибка: неверный ANTHROPIC_API_KEY в файле .env."
             except anthropic.RateLimitError:
@@ -155,7 +158,16 @@ def main() -> None:
         log.warning("TELEGRAM_ALLOWED_USERS пуст — бот никому не ответит, но сообщит ваш ID. Напишите ему /start.")
 
     data_dir = Path(os.environ.get("ASSISTANT_DATA_DIR", "data"))
-    bot = Bot(allowed, Toolbox(data_dir), anthropic.Anthropic())
+    backend = os.environ.get("ASSISTANT_BACKEND") or ("api" if os.environ.get("ANTHROPIC_API_KEY") else "claude-code")
+    if backend == "api":
+        client, toolbox = anthropic.Anthropic(), Toolbox(data_dir)
+        make_assistant = lambda chat_id: Assistant(client, toolbox)  # noqa: E731
+        log.info("Режим: Claude API")
+    else:
+        make_assistant = lambda chat_id: ClaudeCodeAssistant(data_dir, chat_key=str(chat_id))  # noqa: E731
+        make_assistant(0)  # сразу проверить, что Claude Code установлен
+        log.info("Режим: Claude Code по подписке (без API-ключа)")
+    bot = Bot(allowed, make_assistant)
 
     app = Application.builder().token(token).concurrent_updates(True).build()
     app.add_handler(CommandHandler("start", bot.start))

@@ -32,6 +32,10 @@ python -m assistant
 
 Бот работает у вас на компьютере, пока открыто окно с ним. Голосовые сообщения он распознаёт локально (Whisper), а отвечает голосом через бесплатный Microsoft Edge TTS. На текст отвечает текстом, на голосовое — текстом и голосом.
 
+**Два режима работы:**
+- **По подписке Claude, без API-ключа** (если `ANTHROPIC_API_KEY` пуст). Бот передаёт сообщения в Claude Code на этом компьютере. Нужен установленный Claude Code (`claude` в командной строке), в котором вы вошли в свой аккаунт. Расходуются лимиты подписки. Заметки и задачи хранятся в `data/notes.md` и `data/tasks.md`.
+- **Через Claude API** (если `ANTHROPIC_API_KEY` заполнен). Оплата по факту использования, лимиты подписки не тратятся.
+
 **Первый запуск (Windows):**
 
 1. Установите Python 3.11+ с https://www.python.org/downloads/ и отметьте галочку **Add Python to PATH**.
@@ -45,7 +49,7 @@ python -m assistant
    copy .env.example .env
    notepad .env
    ```
-5. В блокноте впишите `ANTHROPIC_API_KEY` и `TELEGRAM_BOT_TOKEN`, сохраните.
+5. В блокноте впишите `TELEGRAM_BOT_TOKEN` (и `ANTHROPIC_API_KEY`, если работаете через API), сохраните.
 6. Запустите бота: `python -m assistant.telegram_bot`
 7. Напишите боту в Telegram `/start`. Он ответит «Доступ закрыт» и покажет ваш ID.
 8. Впишите этот ID в `TELEGRAM_ALLOWED_USERS` в `.env`, остановите бота (Ctrl+C) и запустите снова.
@@ -70,6 +74,7 @@ python -m assistant
 
 - `assistant/main.py`: агентный цикл. Потоковый вывод, adaptive thinking, кэширование промпта, автоматический переход на запасную модель при отказе (`fallbacks: "default"`), обработка `pause_turn` и ошибок API.
 - `assistant/telegram_bot.py`, `assistant/voice.py`: Telegram-бот, распознавание речи и озвучка.
+- `assistant/claude_code_backend.py`: режим «по подписке» — ответы через `claude -p` с продолжением диалога (`--resume`).
 - `assistant/tools.py`: описания и реализация локальных инструментов. Новый инструмент добавляется двумя шагами: метод в `Toolbox` и схема в `LOCAL_TOOLS`.
 
 ## Тесты

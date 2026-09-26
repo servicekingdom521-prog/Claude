@@ -68,15 +68,17 @@ class FakeAssistant:
     def __init__(self, *a, **k):
         self.messages = []
 
+    def reset(self):
+        self.messages.clear()
+
     def ask(self, text, out):
         self.messages.append(text)
         return f"Ответ на: {text}"
 
 
 @pytest.fixture
-def bot(monkeypatch, tmp_path):
-    monkeypatch.setattr(telegram_bot, "Assistant", FakeAssistant)
-    return Bot({42}, toolbox=None, client=None)
+def bot():
+    return Bot({42}, lambda chat_id: FakeAssistant())
 
 
 def test_stranger_is_rejected_and_told_id(bot):

@@ -37,6 +37,9 @@ class Assistant:
         self.model = model
         self.messages: list[dict] = []
 
+    def reset(self) -> None:
+        self.messages.clear()
+
     def _request(self):
         return self.client.beta.messages.stream(
             model=self.model,
