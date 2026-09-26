@@ -32,6 +32,21 @@ class ClaudeCodeError(Exception):
     pass
 
 
+def find_claude() -> str | None:
+    """Найти claude в PATH, в CLAUDE_BIN или в папке стандартного установщика."""
+    if os.environ.get("CLAUDE_BIN"):
+        return os.environ["CLAUDE_BIN"]
+    found = shutil.which("claude")
+    if found:
+        return found
+    # Установщик кладёт claude в ~/.local/bin, но открытые окна не видят обновлённый PATH.
+    for name in ("claude.exe", "claude"):
+        candidate = Path.home() / ".local" / "bin" / name
+        if candidate.is_file():
+            return str(candidate)
+    return None
+
+
 class ClaudeCodeAssistant:
     def __init__(self, data_dir: Path, chat_key: str = "default", claude_bin: str | None = None):
         self.data_dir = Path(data_dir).resolve()
@@ -42,7 +57,7 @@ class ClaudeCodeAssistant:
         self.prompt_file.write_text(SYSTEM_PROMPT, encoding="utf-8")
         self.sessions_file = self.data_dir / "sessions.json"
         self.chat_key = chat_key
-        self.claude_bin = claude_bin or shutil.which("claude")
+        self.claude_bin = claude_bin or find_claude()
         if not self.claude_bin:
             raise ClaudeCodeError("Не найдена команда claude — установите Claude Code и войдите в аккаунт.")
 

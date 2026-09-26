@@ -72,7 +72,19 @@ def test_errors_are_reported(tmp_path, fake_bin):
     assert "--resume" not in calls(tmp_path / "data")[-1]["args"]
 
 
-def test_missing_claude_is_explained(tmp_path, monkeypatch):
+def test_claude_found_in_installer_folder(tmp_path, monkeypatch):
+    monkeypatch.delenv("CLAUDE_BIN", raising=False)
     monkeypatch.setattr("shutil.which", lambda name: None)
+    monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
+    exe = tmp_path / ".local" / "bin" / "claude.exe"
+    exe.parent.mkdir(parents=True)
+    exe.write_text("")
+    assert ClaudeCodeAssistant(tmp_path / "data").claude_bin == str(exe)
+
+
+def test_missing_claude_is_explained(tmp_path, monkeypatch):
+    monkeypatch.delenv("CLAUDE_BIN", raising=False)
+    monkeypatch.setattr("shutil.which", lambda name: None)
+    monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
     with pytest.raises(ClaudeCodeError, match="Claude Code"):
         ClaudeCodeAssistant(tmp_path)
