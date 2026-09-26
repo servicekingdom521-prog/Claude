@@ -119,6 +119,9 @@ class Bot:
                 reply = "Нет соединения с Claude API — проверьте интернет."
             except anthropic.APIStatusError as e:
                 reply = f"Ошибка API {e.status_code}: {e.message}"
+            except Exception as e:
+                log.exception("Сбой при ответе")
+                reply = f"Не получилось ответить: {e}"
             finally:
                 typing.cancel()
 
