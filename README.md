@@ -28,6 +28,36 @@ python -m assistant
 
 Команды в чате: `/new` начинает новый диалог, `/exit` завершает работу.
 
+## Telegram-бот с голосом
+
+Бот работает у вас на компьютере, пока открыто окно с ним. Голосовые сообщения он распознаёт локально (Whisper), а отвечает голосом через бесплатный Microsoft Edge TTS. На текст отвечает текстом, на голосовое — текстом и голосом.
+
+**Первый запуск (Windows):**
+
+1. Установите Python 3.11+ с https://www.python.org/downloads/ и отметьте галочку **Add Python to PATH**.
+2. Скачайте проект: зелёная кнопка **Code → Download ZIP** на GitHub, распакуйте.
+3. Откройте папку проекта, в адресной строке проводника наберите `cmd` и нажмите Enter.
+4. Выполните:
+   ```bat
+   python -m venv .venv
+   .venv\Scripts\activate
+   pip install -r requirements.txt
+   copy .env.example .env
+   notepad .env
+   ```
+5. В блокноте впишите `ANTHROPIC_API_KEY` и `TELEGRAM_BOT_TOKEN`, сохраните.
+6. Запустите бота: `python -m assistant.telegram_bot`
+7. Напишите боту в Telegram `/start`. Он ответит «Доступ закрыт» и покажет ваш ID.
+8. Впишите этот ID в `TELEGRAM_ALLOWED_USERS` в `.env`, остановите бота (Ctrl+C) и запустите снова.
+
+Готово: теперь бот отвечает только вам. Первое голосовое обработается дольше обычного, потому что скачивается модель распознавания (~500 МБ, один раз).
+
+**macOS / Linux:** то же самое, но `source .venv/bin/activate`, `cp .env.example .env` и `nano .env`.
+
+**Дальнейшие запуски:** открыть папку → `cmd` → `.venv\Scripts\activate` → `python -m assistant.telegram_bot`.
+
+Команды бота: `/start` — приветствие, `/new` — новый диалог. Голос меняется в `.env` (`TTS_VOICE`).
+
 ## Примеры запросов
 
 - «Найди трёх главных конкурентов для кофейни в Киеве и сохрани сравнение в файл»
@@ -39,6 +69,7 @@ python -m assistant
 ## Как устроено
 
 - `assistant/main.py`: агентный цикл. Потоковый вывод, adaptive thinking, кэширование промпта, автоматический переход на запасную модель при отказе (`fallbacks: "default"`), обработка `pause_turn` и ошибок API.
+- `assistant/telegram_bot.py`, `assistant/voice.py`: Telegram-бот, распознавание речи и озвучка.
 - `assistant/tools.py`: описания и реализация локальных инструментов. Новый инструмент добавляется двумя шагами: метод в `Toolbox` и схема в `LOCAL_TOOLS`.
 
 ## Тесты

@@ -1,2 +1,6 @@
 anthropic>=1.8.0
 python-dotenv>=1.0
+# Telegram-бот с голосом
+python-telegram-bot>=21,<23
+edge-tts>=7.0
+faster-whisper>=1.1
