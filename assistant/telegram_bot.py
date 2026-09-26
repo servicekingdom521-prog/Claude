@@ -161,8 +161,20 @@ def main() -> None:
         log.warning("TELEGRAM_ALLOWED_USERS пуст — бот никому не ответит, но сообщит ваш ID. Напишите ему /start.")
 
     data_dir = Path(os.environ.get("ASSISTANT_DATA_DIR", "data"))
-    backend = os.environ.get("ASSISTANT_BACKEND") or ("api" if os.environ.get("ANTHROPIC_API_KEY") else "claude-code")
-    if backend == "api":
+    backend = os.environ.get("ASSISTANT_BACKEND") or (
+        "api" if os.environ.get("ANTHROPIC_API_KEY")
+        else "gemini" if os.environ.get("GEMINI_API_KEY")
+        else "claude-code"
+    )
+    if backend == "gemini":
+        from google import genai
+
+        from assistant.gemini_backend import GeminiAssistant
+
+        client, toolbox = genai.Client(api_key=os.environ["GEMINI_API_KEY"]), Toolbox(data_dir)
+        make_assistant = lambda chat_id: GeminiAssistant(client, toolbox)  # noqa: E731
+        log.info("Режим: Google Gemini (%s)", os.environ.get("GEMINI_MODEL", "gemini-flash-latest"))
+    elif backend == "api":
         client, toolbox = anthropic.Anthropic(), Toolbox(data_dir)
         make_assistant = lambda chat_id: Assistant(client, toolbox)  # noqa: E731
         log.info("Режим: Claude API")
