@@ -429,7 +429,9 @@
   function fmtUptime(s) { const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return `в работе ${h} ч ${String(m).padStart(2, "0")} мин`; }
   function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 
+  let lastStatus = null;
   function render(st) {
+    lastStatus = st;
     $("brain").textContent = st.backend;
     const sys = st.system;
     meter("cpu", sys.cpu); meter("ram", sys.ram); meter("disk", sys.disk);
@@ -510,9 +512,12 @@
   }
 
   let busy = false;
-  async function ask(text) {
+  async function ask(text, alreadyLogged = false) {
     text = text.trim(); if (!text || busy) return;
-    busy = true; logMsg("u", text); setState("thinking"); $("reply").textContent = "";
+    const wake = text.match(WAKE);
+    const rest = wake ? (text.slice(0, wake.index) + " " + text.slice(wake.index + wake[0].length)).trim() : text;
+    if (isGreeting(rest) || (wake && !rest)) { if (!alreadyLogged) logMsg("u", text); greet(); return; }
+    busy = true; if (!alreadyLogged) logMsg("u", text); setState("thinking"); $("reply").textContent = "";
     try {
       let reply;
       if (live) {
@@ -547,7 +552,23 @@
   /* ---------- Голос ---------- */
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let rec = null, recActive = false, recPaused = false, pushToTalk = false, awaitingCommand = false;
-  const WAKE = /(джарвис|джервис|jarvis|жарвис)[,.!\s]*/i;
+  const WAKE = /(джарвис|джарвиз|джервис|джарвес|жарвис|jarvis)[,.!?\s]*/i;
+  const GREETING = /^(привет|приветствую|здравствуй|здравствуйте|добрый\s+(день|вечер)|доброе\s+утро|доброй\s+ночи|хай|hello|hi|hey|салют|ку|вітаю|привіт)[,.!?\s]*$/i;
+
+  // Приветствие обрабатываем прямо в браузере: быстро и без расхода лимита.
+  function greet() {
+    const h = new Date().getHours();
+    const part = h < 5 ? "Доброй ночи" : h < 12 ? "Доброе утро" : h < 18 ? "Добрый день" : "Добрый вечер";
+    const open = (lastStatus?.tasks || []).filter((t) => !t.done);
+    const tasks = open.length === 0 ? "Открытых задач нет."
+      : open.length === 1 ? `Одна открытая задача: ${open[0].title}.`
+      : `Открытых задач: ${open.length}. Первая — ${open[0].title}.`;
+    const reply = `${part}, ${title}. Все системы в норме. ${tasks} Чем могу помочь?`;
+    logMsg("j", reply); typeReply(reply);
+    awaitingCommand = true;
+    speak(reply);
+  }
+  function isGreeting(text) { return GREETING.test(text.trim()); }
 
   function micError(msg) { $("hint").innerHTML = msg; $("mic").classList.remove("on"); setState("idle"); }
 
@@ -566,8 +587,12 @@
       if (pushToTalk) { pushToTalk = false; stopRecognition(); ask(finalText); return; }
       const m = finalText.match(WAKE);
       if (m) {
+        const before = finalText.slice(0, m.index).trim();
         const cmd = finalText.slice(m.index + m[0].length).trim();
-        if (cmd) ask(cmd); else { awaitingCommand = true; setState("listening", "Слушаю, " + title); speak("Да, " + title + "?"); }
+        logMsg("u", finalText.trim());
+        if (cmd && !isGreeting(cmd)) ask(cmd, true);
+        else if (isGreeting(before) || isGreeting(cmd)) greet();
+        else { awaitingCommand = true; setState("listening", "Слушаю, " + title); speak("Да, " + title + "?"); }
       } else if (awaitingCommand) { awaitingCommand = false; ask(finalText); }
     };
     rec.onerror = (e) => {
@@ -623,7 +648,7 @@
       if (!st.jarvis) throw new Error("not jarvis");
       live = true; title = st.title || title; render(st);
       $("link-dot").className = "dot ok"; $("link-label").textContent = "Онлайн";
-      $("hint").innerHTML = "Нажмите на реактор или микрофон и говорите. Для режима «всегда слушать» включите галочку ниже.";
+      $("hint").innerHTML = "Нажмите на реактор или микрофон и говорите. Включите «Слушать постоянно» — и Джарвис будет откликаться на <b>«Привет, Джарвис»</b> и команды вида «Джарвис, …».";
       try { if (localStorage.getItem("jarvis-wake") === "1") { $("wake").checked = true; startRecognition(); } } catch {}
       setInterval(refresh, 5000);
       const greet = `Системы в норме, ${title}. Чем могу помочь?`;
@@ -632,7 +657,7 @@
       live = false; render(DEMO);
       $("link-dot").className = "dot demo"; $("link-label").textContent = "Превью";
       $("hint").innerHTML = "<b>Превью интерфейса.</b> Задачи и заметки здесь для примера, ответы заготовлены. Рабочая версия запускается на вашем компьютере командой <b>python -m assistant.jarvis_web</b>.";
-      const greet = `Добрый день, ${title}. Это превью: попробуйте кнопку «Брифинг».`;
+      const greet = `Добрый день, ${title}. Это превью: попробуйте кнопку «Брифинг» или напишите «Привет, Джарвис».`;
       logMsg("j", greet); typeReply(greet);
     }
   })();
