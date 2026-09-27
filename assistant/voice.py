@@ -1,13 +1,21 @@
-"""Голос: распознавание речи (faster-whisper, локально) и озвучка (Edge TTS, бесплатно)."""
+"""Голос: распознавание речи (faster-whisper, локально) и озвучка.
 
+Озвучка: ElevenLabs, если в .env задан ELEVENLABS_API_KEY (при ошибке или исчерпанном
+лимите — автоматически Edge TTS), иначе бесплатный Edge TTS.
+"""
+
+import logging
 import os
 import re
 from pathlib import Path
 
+import aiohttp
 import edge_tts
 
+log = logging.getLogger("assistant.voice")
+
 WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "small")
-TTS_VOICE = os.environ.get("TTS_VOICE", "ru-RU-SvetlanaNeural")
+TTS_VOICE = os.environ.get("TTS_VOICE", "ru-RU-DmitryNeural")
 MAX_SPOKEN_CHARS = 3000
 
 _whisper = None
@@ -45,10 +53,36 @@ def to_speech_text(markdown: str) -> str:
     return text
 
 
-async def synthesize(text: str, out_path: Path, voice: str = TTS_VOICE) -> bool:
+class ElevenLabsError(Exception):
+    pass
+
+
+async def elevenlabs_tts(text: str, out_path: Path) -> None:
+    api_key = os.environ["ELEVENLABS_API_KEY"]
+    voice_id = os.environ.get("ELEVENLABS_VOICE_ID") or "JBFqnCBsd6RMkjVDRZzb"
+    model = os.environ.get("ELEVENLABS_MODEL") or "eleven_multilingual_v2"
+    base = os.environ.get("ELEVENLABS_BASE_URL", "https://api.elevenlabs.io")
+    url = f"{base}/v1/text-to-speech/{voice_id}?output_format=mp3_44100_128"
+    payload = {"text": text, "model_id": model}
+    timeout = aiohttp.ClientTimeout(total=60)
+    async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+        async with session.post(url, json=payload, headers={"xi-api-key": api_key}) as res:
+            if res.status != 200:
+                raise ElevenLabsError(f"ElevenLabs {res.status}: {(await res.text())[:300]}")
+            out_path.write_bytes(await res.read())
+
+
+async def synthesize(text: str, out_path: Path, voice: str | None = None) -> bool:
     """Озвучить текст в MP3. Возвращает False, если озвучивать нечего."""
     spoken = to_speech_text(text)
     if not spoken:
         return False
-    await edge_tts.Communicate(spoken, voice).save(str(out_path))
+    if os.environ.get("ELEVENLABS_API_KEY"):
+        try:
+            await elevenlabs_tts(spoken, out_path)
+            return True
+        except Exception as e:
+            # Лимит закончился или сеть недоступна — не молчим, озвучиваем бесплатно.
+            log.warning("ElevenLabs недоступен, озвучиваю через Edge TTS: %s", e)
+    await edge_tts.Communicate(spoken, voice or os.environ.get("TTS_VOICE", TTS_VOICE)).save(str(out_path))
     return True
